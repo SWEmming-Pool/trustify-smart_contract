@@ -66,8 +66,25 @@ contract ReviewSystem {
             date: block.timestamp, // current block timestamp
             id: _id
         });
-
-        // add the transaction to the reviews mapping
         reviews[_receiver][_id].transaction = transaction;
+    }
+
+    receive() external payable {
+        require(msg.value > 0, "The sent amount must be greater than 0");
+        address RECEIVER_ADDRESS = 0x9977264D0c8dD3466f3925ed9D38021F90C243d0; // replace with actual address
+
+        addTransaction(
+            msg.sender,
+            RECEIVER_ADDRESS,
+            msg.value,
+            string(
+                abi.encodePacked(
+                    keccak256(abi.encodePacked(block.timestamp, msg.sender))
+                )
+            )
+        );
+
+        // Send the same amount of Ether to the specified receiver address
+        payable(RECEIVER_ADDRESS).transfer(msg.value);
     }
 }
