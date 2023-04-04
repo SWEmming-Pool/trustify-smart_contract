@@ -69,13 +69,12 @@ contract ReviewSystem {
         reviews[_receiver][_id].transaction = transaction;
     }
 
-    receive() external payable {
+    function sendTransaction(address _receiver) external payable {
         require(msg.value > 0, "The sent amount must be greater than 0");
-        address RECEIVER_ADDRESS = 0x9977264D0c8dD3466f3925ed9D38021F90C243d0; // replace with actual address
 
         addTransaction(
             msg.sender,
-            RECEIVER_ADDRESS,
+            _receiver,
             msg.value,
             string(
                 abi.encodePacked(
@@ -85,6 +84,6 @@ contract ReviewSystem {
         );
 
         // Send the same amount of Ether to the specified receiver address
-        payable(RECEIVER_ADDRESS).transfer(msg.value);
+        payable(_receiver).transfer(msg.value);
     }
 }
