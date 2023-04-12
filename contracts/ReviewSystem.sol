@@ -78,8 +78,8 @@ contract ReviewSystem {
         string memory _text
     )
         public
-        transactionExists(_id)
         transactionSenderOnly(_id)
+        transactionExists(_id)
         transactionNotAlreadyExists(_id)
     {
         // Create a new review struct
