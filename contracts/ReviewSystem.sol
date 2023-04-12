@@ -62,7 +62,7 @@ contract ReviewSystem {
         );
         _;
     }
-    modifier transactionNotAlreadyExists(bytes32 _id) {
+    modifier reviewNotAlreadyExists(bytes32 _id) {
         // Check that a review for this transaction doesn't already exist
         require(
             bytes(reviews[_id].text).length == 0,
@@ -80,7 +80,7 @@ contract ReviewSystem {
         public
         transactionSenderOnly(_id)
         transactionExists(_id)
-        transactionNotAlreadyExists(_id)
+        reviewNotAlreadyExists(_id)
     {
         // Create a new review struct
         ReviewLibrary.Review memory newReview = ReviewLibrary.Review({
