@@ -82,7 +82,18 @@ contract ReviewSystem {
         transactionExists(_id)
         reviewNotAlreadyExists(_id)
     {
-        // Create a new review struct
+        require(
+            bytes(_title).length <= 50,
+            "Title must be less than or equal to 50 characters"
+        );
+
+        require(_rating >= 1 && _rating <= 5, "Rating must be between 1 and 5");
+
+        require(
+            bytes(_text).length <= 500,
+            "Text must be less than or equal to 500 characters"
+        );
+
         ReviewLibrary.Review memory newReview = ReviewLibrary.Review({
             title: _title,
             date: block.timestamp,
@@ -90,17 +101,63 @@ contract ReviewSystem {
             text: _text
         });
 
-        // Add the review to the reviews mapping
         reviews[_id] = newReview;
     }
 
-    function getIDs(address _address) external view returns (bytes32[] memory) {
-        return TransactionLibrary.getTransactionIDs(transactions[_address]);
+    function getUnreviewedTransactionIDs(
+        address _address
+    ) external view returns (bytes32[] memory) {
+        uint unreviewedCount = 0;
+
+        for (uint i = 0; i < transactions[_address].length; i++) {
+            if (bytes(reviews[transactions[_address][i].id].text).length == 0) {
+                unreviewedCount++;
+            }
+        }
+
+        bytes32[] memory unreviewedIDs = new bytes32[](unreviewedCount);
+
+        uint j = 0;
+        for (uint i = 0; i < transactions[_address].length; i++) {
+            if (bytes(reviews[transactions[_address][i].id].text).length == 0) {
+                unreviewedIDs[j] = transactions[_address][i].id;
+                j++;
+            }
+        }
+
+        return unreviewedIDs;
     }
 
-    function getReview(
-        bytes32 _id
-    ) public view returns (ReviewLibrary.Review memory) {
-        return ReviewLibrary.getReview(reviews, _id);
+    // function getReview(
+    //     bytes32 _id
+    // ) public view returns (ReviewLibrary.Review memory) {
+    //     return ReviewLibrary.getReview(reviews, _id);
+    // }
+
+    // UC09
+    function getReviewsForAddress(
+        address _address
+    ) public view returns (ReviewLibrary.Review[] memory) {
+        uint reviewCount = 0;
+
+        for (uint i = 0; i < transactions[_address].length; i++) {
+            if (bytes(reviews[transactions[_address][i].id].text).length > 0) {
+                reviewCount++;
+            }
+        }
+
+        ReviewLibrary.Review[]
+            memory reviewsForAddress = new ReviewLibrary.Review[](reviewCount);
+
+        uint j = 0;
+        for (uint i = 0; i < transactions[_address].length; i++) {
+            bytes32 id = transactions[_address][i].id;
+            if (bytes(reviews[id].text).length > 0) {
+                reviewsForAddress[j] = reviews[id];
+                j++;
+            }
+        }
+
+        return reviewsForAddress;
     }
 }
