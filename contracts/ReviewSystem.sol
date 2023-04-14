@@ -104,9 +104,32 @@ contract ReviewSystem {
         reviews[_id] = newReview;
     }
 
-    function getUnreviewedTransactionIDs(
+    // function getUnreviewedTransactionIDs(
+    //     address _address
+    // ) external view returns (bytes32[] memory) {
+    //     uint unreviewedCount = 0;
+
+    //     for (uint i = 0; i < transactions[_address].length; i++) {
+    //         if (bytes(reviews[transactions[_address][i].id].text).length == 0) {
+    //             unreviewedCount++;
+    //         }
+    //     }
+
+    //     bytes32[] memory unreviewedIDs = new bytes32[](unreviewedCount);
+
+    //     uint j = 0;
+    //     for (uint i = 0; i < transactions[_address].length; i++) {
+    //         if (bytes(reviews[transactions[_address][i].id].text).length == 0) {
+    //             unreviewedIDs[j] = transactions[_address][i].id;
+    //             j++;
+    //         }
+    //     }
+
+    //     return unreviewedIDs;
+    // }
+    function getUnreviewedTransactions(
         address _address
-    ) external view returns (bytes32[] memory) {
+    ) external view returns (TransactionLibrary.Transaction[] memory) {
         uint unreviewedCount = 0;
 
         for (uint i = 0; i < transactions[_address].length; i++) {
@@ -115,17 +138,20 @@ contract ReviewSystem {
             }
         }
 
-        bytes32[] memory unreviewedIDs = new bytes32[](unreviewedCount);
+        TransactionLibrary.Transaction[]
+            memory unreviewedTransactions = new TransactionLibrary.Transaction[](
+                unreviewedCount
+            );
 
         uint j = 0;
         for (uint i = 0; i < transactions[_address].length; i++) {
             if (bytes(reviews[transactions[_address][i].id].text).length == 0) {
-                unreviewedIDs[j] = transactions[_address][i].id;
+                unreviewedTransactions[j] = transactions[_address][i];
                 j++;
             }
         }
 
-        return unreviewedIDs;
+        return unreviewedTransactions;
     }
 
     // function getReview(
@@ -160,4 +186,12 @@ contract ReviewSystem {
 
         return reviewsForAddress;
     }
+
+    // function getTransactionById(
+    //     bytes32 _id,
+    //     address _address
+    // ) public view returns (TransactionLibrary.Transaction memory) {
+    //     return
+    //         TransactionLibrary.getTransactionById(transactions[_address], _id);
+    // }
 }

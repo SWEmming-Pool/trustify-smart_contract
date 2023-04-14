@@ -9,18 +9,18 @@ library ReviewLibrary {
         string text;
     }
 
-    function getReview(
-        mapping(bytes32 => Review) storage self,
-        bytes32 _id
-    ) internal view returns (Review memory) {
-        // Check that a review for this transaction exists
-        require(
-            bytes(self[_id].text).length > 0,
-            "No reviews found for this transaction"
-        );
+    //     function getReview(
+    //         mapping(bytes32 => Review) storage self,
+    //         bytes32 _id
+    //     ) internal view returns (Review memory) {
+    //         // Check that a review for this transaction exists
+    //         require(
+    //             bytes(self[_id].text).length > 0,
+    //             "No reviews found for this transaction"
+    //         );
 
-        Review memory myreview = self[_id];
+    //         Review memory myreview = self[_id];
 
-        return myreview;
-    }
+    //         return myreview;
+    //     }
 }

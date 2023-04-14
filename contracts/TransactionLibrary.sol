@@ -56,4 +56,16 @@ library TransactionLibrary {
         }
         return false;
     }
+
+    //     function getTransactionById(
+    //         Transaction[] storage self,
+    //         bytes32 id
+    //     ) internal view returns (Transaction memory) {
+    //         for (uint i = 0; i < self.length; i++) {
+    //             if (self[i].id == id) {
+    //                 return self[i];
+    //             }
+    //         }
+    //         revert("Transaction not found.");
+    //     }
 }
