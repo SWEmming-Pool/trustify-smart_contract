@@ -5,6 +5,21 @@ import "./TransactionLibrary.sol";
 import "./ReviewLibrary.sol";
 
 contract ReviewSystem {
+    event TransactionSent(
+        address indexed _from,
+        address indexed _to,
+        uint256 _amount,
+        bytes32 _id
+    );
+
+    event ReviewAdded(
+        string title,
+        uint256 timestamp,
+        uint8 rating,
+        string text,
+        bytes32 id
+    );
+
     using TransactionLibrary for TransactionLibrary.Transaction[];
     mapping(address => TransactionLibrary.Transaction[]) private transactions;
     mapping(bytes32 => ReviewLibrary.Review) private reviews;
@@ -24,18 +39,19 @@ contract ReviewSystem {
         );
 
         payable(_receiver).transfer(msg.value);
+        emit TransactionSent(msg.sender, _receiver, msg.value, id);
     }
 
     function addReview(
-        bytes32 _id,
+        bytes32 _transactionId,
         string memory _title,
         uint8 _rating,
         string memory _text
     )
         public
-        transactionSenderOnly(_id)
-        transactionExists(_id)
-        reviewNotAlreadyExists(_id)
+        transactionSenderOnly(_transactionId)
+        transactionExists(_transactionId)
+        reviewNotAlreadyExists(_transactionId)
     {
         require(
             bytes(_title).length <= 50,
@@ -48,8 +64,23 @@ contract ReviewSystem {
             bytes(_text).length <= 500,
             "Text must be less than or equal to 500 characters"
         );
+        ReviewLibrary.Review memory newReview = ReviewLibrary.Review({
+            title: _title,
+            date: block.timestamp,
+            rating: _rating,
+            text: _text,
+            transactionId: _transactionId
+        });
 
-        reviews[_id].addReview(_title, block.timestamp, _rating, _text);
+        reviews[_transactionId] = newReview;
+
+        emit ReviewAdded(
+            _title,
+            block.timestamp,
+            _rating,
+            _text,
+            _transactionId
+        );
     }
 
     function getUnreviewedTransactions(
@@ -71,7 +102,7 @@ contract ReviewSystem {
         uint j = 0;
         for (uint i = 0; i < transactions[_address].length; i++) {
             if (bytes(reviews[transactions[_address][i].id].text).length == 0) {
-                unreviewedTransactions[j] = tran - sactions[_address][i];
+                unreviewedTransactions[j] = transactions[_address][i];
                 j++;
             }
         }
