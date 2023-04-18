@@ -83,6 +83,17 @@ contract ReviewSystem {
         );
     }
 
+    function getTransaction(
+        address _address,
+        bytes32 _id
+    ) public view returns (TransactionLibrary.Transaction memory) {
+        require(
+            TransactionLibrary.containsTransaction(transactions[_address], _id),
+            "Transaction not found"
+        );
+        return transactions[_address].getTransactionById(_id);
+    }
+
     function getUnreviewedTransactions(
         address _address
     ) external view returns (TransactionLibrary.Transaction[] memory) {

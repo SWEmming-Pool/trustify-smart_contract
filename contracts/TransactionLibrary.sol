@@ -28,6 +28,20 @@ library TransactionLibrary {
         self.push(newTransaction);
     }
 
+    function getTransactionById(
+        Transaction[] storage self,
+        bytes32 _id
+    ) internal view returns (TransactionLibrary.Transaction memory) {
+        require(self.length > 0, "No transactions found for this address");
+
+        for (uint i = 0; i < self.length; i++) {
+            if (self[i].id == _id) {
+                return self[i];
+            }
+        }
+        revert("No transaction found with the given ID for this address");
+    }
+
     function containsTransaction(
         Transaction[] storage self,
         bytes32 transactionId
