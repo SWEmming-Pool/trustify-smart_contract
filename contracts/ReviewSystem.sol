@@ -21,7 +21,11 @@ contract ReviewSystem {
     );
 
     using TransactionLibrary for TransactionLibrary.Transaction[];
-    mapping(address => TransactionLibrary.Transaction[]) private transactions;
+
+    mapping(address => TransactionLibrary.Transaction[])
+        private transactionsBySender;
+    mapping(address => TransactionLibrary.Transaction[])
+        private transactionsByReceiver;
     mapping(bytes32 => ReviewLibrary.Review) private reviews;
 
     function sendTransaction(address _receiver) external payable {
@@ -31,7 +35,13 @@ contract ReviewSystem {
             abi.encodePacked(msg.sender, _receiver, msg.value, block.timestamp)
         );
 
-        transactions[msg.sender].addTransaction(
+        transactionsBySender[msg.sender].addTransaction(
+            msg.sender,
+            _receiver,
+            msg.value,
+            id
+        );
+        transactionsByReceiver[_receiver].addTransaction(
             msg.sender,
             _receiver,
             msg.value,
@@ -83,24 +93,44 @@ contract ReviewSystem {
         );
     }
 
-    function getTransaction(
-        address _address,
+    function getTransactionForSender(
+        address _sender,
         bytes32 _id
     ) public view returns (TransactionLibrary.Transaction memory) {
         require(
-            TransactionLibrary.containsTransaction(transactions[_address], _id),
+            TransactionLibrary.containsTransaction(
+                transactionsBySender[_sender],
+                _id
+            ),
             "Transaction not found"
         );
-        return transactions[_address].getTransactionById(_id);
+        return transactionsBySender[_sender].getTransactionById(_id);
+    }
+
+    function getTransactionForReciver(
+        address _reciver,
+        bytes32 _id
+    ) public view returns (TransactionLibrary.Transaction memory) {
+        require(
+            TransactionLibrary.containsTransaction(
+                transactionsByReceiver[_reciver],
+                _id
+            ),
+            "Transaction not found"
+        );
+        return transactionsByReceiver[_reciver].getTransactionById(_id);
     }
 
     function getUnreviewedTransactions(
-        address _address
+        address _sender
     ) external view returns (TransactionLibrary.Transaction[] memory) {
         uint unreviewedCount = 0;
 
-        for (uint i = 0; i < transactions[_address].length; i++) {
-            if (bytes(reviews[transactions[_address][i].id].text).length == 0) {
+        for (uint i = 0; i < transactionsBySender[_sender].length; i++) {
+            if (
+                bytes(reviews[transactionsBySender[_sender][i].id].text)
+                    .length == 0
+            ) {
                 unreviewedCount++;
             }
         }
@@ -111,9 +141,12 @@ contract ReviewSystem {
             );
 
         uint j = 0;
-        for (uint i = 0; i < transactions[_address].length; i++) {
-            if (bytes(reviews[transactions[_address][i].id].text).length == 0) {
-                unreviewedTransactions[j] = transactions[_address][i];
+        for (uint i = 0; i < transactionsBySender[_sender].length; i++) {
+            if (
+                bytes(reviews[transactionsBySender[_sender][i].id].text)
+                    .length == 0
+            ) {
+                unreviewedTransactions[j] = transactionsBySender[_sender][i];
                 j++;
             }
         }
@@ -122,13 +155,16 @@ contract ReviewSystem {
     }
 
     // UC09
-    function getReviewsForAddress(
-        address _address
+    function getReviewsForSender(
+        address _sender
     ) public view returns (ReviewLibrary.Review[] memory) {
         uint reviewCount = 0;
 
-        for (uint i = 0; i < transactions[_address].length; i++) {
-            if (bytes(reviews[transactions[_address][i].id].text).length > 0) {
+        for (uint i = 0; i < transactionsBySender[_sender].length; i++) {
+            if (
+                bytes(reviews[transactionsBySender[_sender][i].id].text)
+                    .length > 0
+            ) {
                 reviewCount++;
             }
         }
@@ -137,8 +173,37 @@ contract ReviewSystem {
             memory reviewsForAddress = new ReviewLibrary.Review[](reviewCount);
 
         uint j = 0;
-        for (uint i = 0; i < transactions[_address].length; i++) {
-            bytes32 id = transactions[_address][i].id;
+        for (uint i = 0; i < transactionsBySender[_sender].length; i++) {
+            bytes32 id = transactionsBySender[_sender][i].id;
+            if (bytes(reviews[id].text).length > 0) {
+                reviewsForAddress[j] = reviews[id];
+                j++;
+            }
+        }
+
+        return reviewsForAddress;
+    }
+
+    function getReviewsForReciver(
+        address _reciver
+    ) public view returns (ReviewLibrary.Review[] memory) {
+        uint reviewCount = 0;
+
+        for (uint i = 0; i < transactionsByReceiver[_reciver].length; i++) {
+            if (
+                bytes(reviews[transactionsByReceiver[_reciver][i].id].text)
+                    .length > 0
+            ) {
+                reviewCount++;
+            }
+        }
+
+        ReviewLibrary.Review[]
+            memory reviewsForAddress = new ReviewLibrary.Review[](reviewCount);
+
+        uint j = 0;
+        for (uint i = 0; i < transactionsByReceiver[_reciver].length; i++) {
+            bytes32 id = transactionsByReceiver[_reciver][i].id;
             if (bytes(reviews[id].text).length > 0) {
                 reviewsForAddress[j] = reviews[id];
                 j++;
@@ -151,7 +216,7 @@ contract ReviewSystem {
     modifier transactionSenderOnly(bytes32 _id) {
         require(
             TransactionLibrary.containsTransaction(
-                transactions[msg.sender],
+                transactionsBySender[msg.sender],
                 _id
             ),
             "Transaction sender is not authorized"
@@ -160,12 +225,12 @@ contract ReviewSystem {
     }
     modifier transactionExists(bytes32 _id) {
         require(
-            transactions[msg.sender].length > 0,
+            transactionsBySender[msg.sender].length > 0,
             "No transactions found for this address"
         );
 
         TransactionLibrary.Transaction[]
-            memory senderTransactions = transactions[msg.sender];
+            memory senderTransactions = transactionsBySender[msg.sender];
         bool transactionFound = false;
         for (uint i = 0; i < senderTransactions.length; i++) {
             if (senderTransactions[i].id == _id) {
