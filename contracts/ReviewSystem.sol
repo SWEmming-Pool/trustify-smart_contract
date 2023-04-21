@@ -6,7 +6,6 @@ pragma experimental ABIEncoderV2;
 // import "./ReviewLibrary.sol";
 
 contract ReviewSystem {
-
     // STRUCTS
 
     struct Review {
@@ -57,19 +56,25 @@ contract ReviewSystem {
 
     // GETTERS
 
-    function getNumberOfReviewsMade(address _sender) external view returns (uint) {
+    function getNumberOfReviewsMade(
+        address _sender
+    ) external view returns (uint) {
         uint num = reviewsBySender[_sender].length;
         return num;
     }
 
-    function getNumberOfReviewsReceived(address _receiver) external view returns (uint) {
+    function getNumberOfReviewsReceived(
+        address _receiver
+    ) external view returns (uint) {
         uint num = reviewsByReceiver[_receiver].length;
         return num;
     }
 
-    // Getters for reviews by ID
+    // Getters for reviews
 
-    function getReviewTitle(bytes32 _reviewId) external view returns (string memory) {
+    function getReviewTitle(
+        bytes32 _reviewId
+    ) external view returns (string memory) {
         return reviewsByTransactionId[_reviewId].title;
     }
 
@@ -81,31 +86,36 @@ contract ReviewSystem {
         return reviewsByTransactionId[_reviewId].rating;
     }
 
-    function getReviewText(bytes32 _reviewId) external view returns (string memory) {
+    function getReviewText(
+        bytes32 _reviewId
+    ) external view returns (string memory) {
         return reviewsByTransactionId[_reviewId].text;
     }
 
-    function getReviewTransactionId(bytes32 _reviewId) external view returns (bytes32) {
+    function getReviewTransactionId(
+        bytes32 _reviewId
+    ) external view returns (bytes32) {
         return reviewsByTransactionId[_reviewId].transactionId;
     }
 
-    // Getters for transaction by ID
-    // getTransactionById serve? Divisa in più getter
+    // Getters for Transaction
 
-    function getTransactionSenderById(bytes32 _id) external view returns (address) {
+    function getTransactionSenderById(
+        bytes32 _id
+    ) external view returns (address) {
         return transactionsById[_id].sender;
     }
 
-    function getTransactionReceiverById(bytes32 _id) external view returns (address) {
+    function getTransactionReceiverById(
+        bytes32 _id
+    ) external view returns (address) {
         return transactionsById[_id].receiver;
     }
 
-    function getTransactionAmountById(bytes32 _id) external view returns (uint) {
+    function getTransactionAmountById(
+        bytes32 _id
+    ) external view returns (uint) {
         return transactionsById[_id].amount;
-    }
-
-    function isTransactionReviewed(bytes32 _id) external view returns (bool) {
-        return transactionsById[_id].reviewed;
     }
 
     function getTransactionDateById(bytes32 _id) external view returns (uint) {
@@ -165,19 +175,6 @@ contract ReviewSystem {
             id: id
         });
 
-        // transactionsBySender[msg.sender].addTransaction(
-        //     msg.sender,
-        //     _receiver,
-        //     msg.value,
-        //     id
-        // );
-        // transactionsByReceiver[_receiver].addTransaction(
-        //     msg.sender,
-        //     _receiver,
-        //     msg.value,
-        //     id
-        // );
-
         payable(_receiver).transfer(msg.value);
         emit TransactionSent(msg.sender, _receiver, msg.value, id);
     }
@@ -196,10 +193,7 @@ contract ReviewSystem {
             "Title must be less than or equal to 50 characters"
         );
 
-        require(
-            _rating >= 1 && _rating <= 5,
-            "Rating must be between 1 and 5"
-        );
+        require(_rating >= 1 && _rating <= 5, "Rating must be between 1 and 5");
 
         require(
             bytes(_text).length <= 500,
@@ -213,7 +207,6 @@ contract ReviewSystem {
             text: _text,
             transactionId: _transactionId
         });
-
 
         reviewsBySender[msg.sender].push(_transactionId);
         reviewsByReceiver[transactionsById[_transactionId].receiver].push(
@@ -231,149 +224,31 @@ contract ReviewSystem {
         );
     }
 
-    // Non servono più perchè ci sono già le mapping divise
-
-    // function getTransactionForSender(
-    //     address _sender,
-    //     bytes32 _id
-    // ) public view returns (TransactionLibrary.Transaction memory) {
-    //     require(
-    //         TransactionLibrary.containsTransaction(
-    //             transactionsBySender[_sender],
-    //             _id
-    //         ),
-    //         "Transaction not found"
-    //     );
-    //     return transactionsBySender[_sender].getTransactionById(_id);
-    // }
-
-    // function getTransactionForReciver(
-    //     address _reciver,
-    //     bytes32 _id
-    // ) public view returns (TransactionLibrary.Transaction memory) {
-    //     require(
-    //         TransactionLibrary.containsTransaction(
-    //             transactionsByReceiver[_reciver],
-    //             _id
-    //         ),
-    //         "Transaction not found"
-    //     );
-    //     return transactionsByReceiver[_reciver].getTransactionById(_id);
-    // }
-
-    // Non dovrebbe servire l'attributo sender perchè è già nella chiamata al metodo
-    // Ritornare un array di bytes32 non dovrebbe rompere web3j per le api
-
-    function getUnreviewdTransactions() external view returns (bytes32[] memory) {
+    function getUnreviewedTransactions(
+        address _sender
+    ) public view returns (bytes32[] memory) {
         uint unreviewedCount = 0;
-        for(uint i = 0; i < reviewsBySender[msg.sender].length; i++) {
-            if(!transactionsById[reviewsBySender[msg.sender][i]].reviewed) {
+        bytes32[] storage transactionIds = reviewsBySender[_sender];
+
+        for (uint i = 0; i < transactionIds.length; i++) {
+            if (!transactionsById[transactionIds[i]].reviewed) {
                 unreviewedCount++;
             }
         }
 
-        bytes32[] memory unreviewedTransactions = new bytes32[](unreviewedCount);
-
-        for(uint i = 0; i < unreviewedCount; i++) {
-            unreviewedTransactions[i] = reviewsBySender[msg.sender][i];
+        bytes32[] memory unreviewedTransactionIds = new bytes32[](
+            unreviewedCount
+        );
+        uint currentIndex = 0;
+        for (uint i = 0; i < transactionIds.length; i++) {
+            bytes32 transactionId = transactionIds[i];
+            Transaction storage transaction = transactionsById[transactionId];
+            if (!transaction.reviewed && transaction.sender == _sender) {
+                unreviewedTransactionIds[currentIndex] = transactionId;
+                currentIndex++;
+            }
         }
 
-        return unreviewedTransactions;
+        return unreviewedTransactionIds;
     }
-
-    // function getUnreviewedTransactions(
-    //     address _sender
-    // ) external view returns (TransactionLibrary.Transaction[] memory) {
-    //     uint unreviewedCount = 0;
-
-    //     for (uint i = 0; i < transactionsBySender[_sender].length; i++) {
-    //         if (
-    //             bytes(reviews[transactionsBySender[_sender][i].id].text)
-    //                 .length == 0
-    //         ) {
-    //             unreviewedCount++;
-    //         }
-    //     }
-
-    //     TransactionLibrary.Transaction[]
-    //         memory unreviewedTransactions = new TransactionLibrary.Transaction[](
-    //             unreviewedCount
-    //         );
-
-    //     uint j = 0;
-    //     for (uint i = 0; i < transactionsBySender[_sender].length; i++) {
-    //         if (
-    //             bytes(reviews[transactionsBySender[_sender][i].id].text)
-    //                 .length == 0
-    //         ) {
-    //             unreviewedTransactions[j] = transactionsBySender[_sender][i];
-    //             j++;
-    //         }
-    //     }
-
-    //     return unreviewedTransactions;
-    // }
-
-    // UC09
-
-    // Anche questi coperti dalle mapping divise
-
-    // function getReviewsForSender(
-    //     address _sender
-    // ) public view returns (ReviewLibrary.Review[] memory) {
-    //     uint reviewCount = 0;
-
-    //     for (uint i = 0; i < transactionsBySender[_sender].length; i++) {
-    //         if (
-    //             bytes(reviews[transactionsBySender[_sender][i].id].text)
-    //                 .length > 0
-    //         ) {
-    //             reviewCount++;
-    //         }
-    //     }
-
-    //     ReviewLibrary.Review[]
-    //         memory reviewsForAddress = new ReviewLibrary.Review[](reviewCount);
-
-    //     uint j = 0;
-    //     for (uint i = 0; i < transactionsBySender[_sender].length; i++) {
-    //         bytes32 id = transactionsBySender[_sender][i].id;
-    //         if (bytes(reviews[id].text).length > 0) {
-    //             reviewsForAddress[j] = reviews[id];
-    //             j++;
-    //         }
-    //     }
-
-    //     return reviewsForAddress;
-    // }
-
-    // function getReviewsForReciver(
-    //     address _reciver
-    // ) public view returns (ReviewLibrary.Review[] memory) {
-    //     uint reviewCount = 0;
-
-    //     for (uint i = 0; i < transactionsByReceiver[_reciver].length; i++) {
-    //         if (
-    //             bytes(reviews[transactionsByReceiver[_reciver][i].id].text)
-    //                 .length > 0
-    //         ) {
-    //             reviewCount++;
-    //         }
-    //     }
-
-    //     ReviewLibrary.Review[]
-    //         memory reviewsForAddress = new ReviewLibrary.Review[](reviewCount);
-
-    //     uint j = 0;
-    //     for (uint i = 0; i < transactionsByReceiver[_reciver].length; i++) {
-    //         bytes32 id = transactionsByReceiver[_reciver][i].id;
-    //         if (bytes(reviews[id].text).length > 0) {
-    //             reviewsForAddress[j] = reviews[id];
-    //             j++;
-    //         }
-    //     }
-
-    //     return reviewsForAddress;
-    // }
-
 }
