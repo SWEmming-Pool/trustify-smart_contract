@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
+pragma experimental ABIEncoderV2;
 
 import "./TransactionLibrary.sol";
 import "./ReviewLibrary.sol";
@@ -22,11 +23,41 @@ contract ReviewSystem {
 
     using TransactionLibrary for TransactionLibrary.Transaction[];
 
-    mapping(address => TransactionLibrary.Transaction[])
-        private transactionsBySender;
-    mapping(address => TransactionLibrary.Transaction[])
-        private transactionsByReceiver;
-    mapping(bytes32 => ReviewLibrary.Review) private reviews;
+    // Tutte le transazioni per il loro id
+    mapping(bytes32 => TransactionLibrary.Transaction) private transactionsById;
+    // Tutte le review per l'id della transazione collegata
+    mapping(bytes32 => ReviewLibrary.Review) private reviewsByTransactionId;
+    // Mapping per ricerca address => arrayTransId
+    mapping(address => bytes32[]) private reviewsBySender;
+    mapping(address => bytes32[]) private reviewsByReceiver;
+
+    function getNumberOfReviewsMade(address _sender) external view returns (uint256) {
+        return reviewsBySender[_sender].length;
+    }
+
+    function getNumberOfReviewsReceived(address _receiver) external view returns (uint256) {
+        return reviewsByReceiver[_receiver].length;
+    }
+
+    function getReviewTitle(bytes32 _reviewId) external view returns (string memory) {
+        return reviewsByTransactionId[_reviewId].title;
+    }
+
+    function getReviewDate(bytes32 _reviewId) external view returns (uint256) {
+        return reviewsByTransactionId[_reviewId].date;
+    }
+
+    function getReviewRating(bytes32 _reviewId) external view returns (uint8) {
+        return reviewsByTransactionId[_reviewId].rating;
+    }
+
+    function getReviewText(bytes32 _reviewId) external view returns (string memory) {
+        return reviewsByTransactionId[_reviewId].text;
+    }
+
+    function getReviewTransactionId(bytes32 _reviewId) external view returns (bytes32) {
+        return reviewsByTransactionId[_reviewId].transactionId;
+    }
 
     function sendTransaction(address _receiver) external payable {
         require(msg.value > 0, "The sent amount must be greater than 0");
