@@ -44,8 +44,6 @@ contract ReviewSystem {
 
     // MAPPINGS
 
-    // using TransactionLibrary for TransactionLibrary.Transaction[];
-
     // All transactions by id
     mapping(bytes32 => Transaction) private transactionsById;
     // All reviews by transaction id
@@ -124,7 +122,7 @@ contract ReviewSystem {
 
     // MODIFIERS
 
-    modifier reviewIsPossible(bytes32 _id) {
+    modifier reviewNotAlreadyExists(bytes32 _id) {
         require(
             !transactionsById[_id].reviewed,
             "This transaction is already been reviewed"
@@ -132,30 +130,18 @@ contract ReviewSystem {
 
         _;
     }
+    modifier transactionSenderOnly(bytes32 _id) {
+        require(
+            transactionsById[_id].sender == msg.sender,
+            "Sender is not the transaction sender"
+        );
+        _;
+    }
 
-    // modifier transactionSenderOnly(bytes32 _id) {
-    //     require(
-    //         getTransactionSenderById(_id) == msg.sender,
-    //         "Transaction sender is not authorized"
-    //     );
-    //     _;
-    // }
-
-    // modifier transactionExists(bytes32 _id) {
-    //     require(
-    //         transactionsById[_id],
-    //         "No transaction found with the given ID for this address"
-    //     );
-    //     _;
-    // }
-
-    // modifier reviewNotAlreadyExists(bytes32 _id) {
-    //     require(
-    //         reviewsByTransactionId[_id],
-    //         "A review for this transaction already exists"
-    //     );
-    //     _;
-    // }
+    modifier transactionExists(bytes32 _id) {
+        require(transactionsById[_id].id != 0, "Transaction does not exist");
+        _;
+    }
 
     // FUNCTIONS
 
@@ -179,15 +165,17 @@ contract ReviewSystem {
         emit TransactionSent(msg.sender, _receiver, msg.value, id);
     }
 
-    function addReview(
+    function review(
         bytes32 _transactionId,
         string memory _title,
         uint8 _rating,
         string memory _text
-    ) public reviewIsPossible(_transactionId) {
-        // transactionSenderOnly(_transactionId)
-        // transactionExists(_transactionId)
-        // reviewNotAlreadyExists(_transactionId)
+    )
+        public
+        transactionSenderOnly(_transactionId)
+        transactionExists(_transactionId)
+        reviewNotAlreadyExists(_transactionId)
+    {
         require(
             bytes(_title).length <= 50,
             "Title must be less than or equal to 50 characters"
