@@ -2,9 +2,6 @@
 pragma solidity ^0.8.0;
 pragma experimental ABIEncoderV2;
 
-// import "./TransactionLibrary.sol";
-// import "./ReviewLibrary.sol";
-
 contract ReviewSystem {
     // STRUCTS
 
@@ -57,15 +54,13 @@ contract ReviewSystem {
     function getNumberOfReviewsMade(
         address _sender
     ) external view returns (uint) {
-        uint num = reviewsBySender[_sender].length;
-        return num;
+        return reviewsBySender[_sender].length;
     }
 
     function getNumberOfReviewsReceived(
         address _receiver
     ) external view returns (uint) {
-        uint num = reviewsByReceiver[_receiver].length;
-        return num;
+        return reviewsByReceiver[_receiver].length;
     }
 
     // Getters for reviews
@@ -120,6 +115,10 @@ contract ReviewSystem {
         return transactionsById[_id].date;
     }
 
+    function isTransactionReviewed(bytes32 _id) external view returns (bool) {
+        return transactionsById[_id].reviewed;
+    }
+
     // MODIFIERS
 
     modifier reviewNotAlreadyExists(bytes32 _id) {
@@ -172,8 +171,8 @@ contract ReviewSystem {
         string memory _text
     )
         public
-        transactionSenderOnly(_transactionId)
         transactionExists(_transactionId)
+        transactionSenderOnly(_transactionId)
         reviewNotAlreadyExists(_transactionId)
     {
         require(
@@ -181,7 +180,10 @@ contract ReviewSystem {
             "Title must be less than or equal to 50 characters"
         );
 
-        require(_rating >= 1 && _rating <= 5, "Rating must be between 1 and 5");
+        require(
+            _rating >= 1 && _rating <= 5,
+            "Rating must be between 1 and 5"
+        );
 
         require(
             bytes(_text).length <= 500,
@@ -212,26 +214,20 @@ contract ReviewSystem {
         );
     }
 
-    function getUnreviewedTransactions(
-        address _sender
-    ) public view returns (bytes32[] memory) {
+    function getUnreviewedTransactions() public view returns(bytes32 [] memory) {
         uint unreviewedCount = 0;
-        bytes32[] storage transactionIds = reviewsBySender[_sender];
-
-        for (uint i = 0; i < transactionIds.length; i++) {
-            if (!transactionsById[transactionIds[i]].reviewed) {
+        for(uint i = 0; i < reviewsBySender[msg.sender].length; i++) {
+            if(!transactionsById[reviewsBySender[msg.sender][i]].reviewed) {
                 unreviewedCount++;
             }
         }
 
-        bytes32[] memory unreviewedTransactionIds = new bytes32[](
-            unreviewedCount
-        );
+        bytes32[] memory unreviewedTransactionIds = new bytes32[](unreviewedCount);
+
         uint currentIndex = 0;
-        for (uint i = 0; i < transactionIds.length; i++) {
-            bytes32 transactionId = transactionIds[i];
-            Transaction storage transaction = transactionsById[transactionId];
-            if (!transaction.reviewed && transaction.sender == _sender) {
+        for(uint i = 0; i < reviewsBySender[msg.sender].length; i++) {
+            bytes32 transactionId = reviewsBySender[msg.sender][i];
+            if(!transactionsById[transactionId].reviewed) {
                 unreviewedTransactionIds[currentIndex] = transactionId;
                 currentIndex++;
             }
@@ -239,4 +235,5 @@ contract ReviewSystem {
 
         return unreviewedTransactionIds;
     }
+
 }
