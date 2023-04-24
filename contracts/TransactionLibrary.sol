@@ -15,14 +15,14 @@ library TransactionLibrary {
         address _sender,
         address _receiver,
         uint256 _amount,
-        bytes32 _id
+        bytes32 _transactionId
     ) internal {
         Transaction memory newTransaction = Transaction({
             sender: _sender,
             receiver: _receiver,
             amount: _amount,
             date: block.timestamp,
-            id: _id
+            id: _transactionId
         });
 
         self.push(newTransaction);
@@ -30,12 +30,12 @@ library TransactionLibrary {
 
     function getTransactionById(
         Transaction[] storage self,
-        bytes32 _id
+        bytes32 _transactionId
     ) internal view returns (TransactionLibrary.Transaction memory) {
         require(self.length > 0, "No transactions found for this address");
 
         for (uint i = 0; i < self.length; i++) {
-            if (self[i].id == _id) {
+            if (self[i].id == _transactionId) {
                 return self[i];
             }
         }
@@ -44,10 +44,10 @@ library TransactionLibrary {
 
     function containsTransaction(
         Transaction[] storage self,
-        bytes32 transactionId
+        bytes32 _transactionId
     ) internal view returns (bool) {
         for (uint i = 0; i < self.length; i++) {
-            if (self[i].id == transactionId) {
+            if (self[i].id == _transactionId) {
                 return true;
             }
         }

@@ -192,17 +192,19 @@ contract ReviewSystem {
         return reviewsForAddress;
     }
 
-    modifier transactionSenderOnly(bytes32 _id) {
+    //MODIFIERS
+
+    modifier transactionSenderOnly(bytes32 _transactionId) {
         require(
             TransactionLibrary.containsTransaction(
                 transactionsBySender[msg.sender],
-                _id
+                _transactionId
             ),
             "Transaction sender is not authorized"
         );
         _;
     }
-    modifier transactionExists(bytes32 _id) {
+    modifier transactionExists(bytes32 _transactionId) {
         require(
             transactionsBySender[msg.sender].length > 0,
             "No transactions found for this address"
@@ -212,7 +214,7 @@ contract ReviewSystem {
             memory senderTransactions = transactionsBySender[msg.sender];
         bool transactionFound = false;
         for (uint i = 0; i < senderTransactions.length; i++) {
-            if (senderTransactions[i].id == _id) {
+            if (senderTransactions[i].id == _transactionId) {
                 transactionFound = true;
                 break;
             }
@@ -223,9 +225,9 @@ contract ReviewSystem {
         );
         _;
     }
-    modifier reviewNotAlreadyExists(bytes32 _id) {
+    modifier reviewNotAlreadyExists(bytes32 _transactionId) {
         require(
-            bytes(reviews[_id].text).length == 0,
+            bytes(reviews[_transactionId].text).length == 0,
             "A review for this transaction already exists"
         );
         _;
