@@ -5,21 +5,6 @@ import "./TransactionLibrary.sol";
 import "./ReviewLibrary.sol";
 
 contract ReviewSystem {
-    event TransactionSent(
-        address indexed _from,
-        address indexed _to,
-        uint256 _amount,
-        bytes32 _id
-    );
-
-    event ReviewAdded(
-        string title,
-        uint256 timestamp,
-        uint8 rating,
-        string text,
-        bytes32 id
-    );
-
     using TransactionLibrary for TransactionLibrary.Transaction[];
 
     mapping(address => TransactionLibrary.Transaction[])
@@ -49,7 +34,6 @@ contract ReviewSystem {
         );
 
         payable(_receiver).transfer(msg.value);
-        emit TransactionSent(msg.sender, _receiver, msg.value, id);
     }
 
     function addReview(
@@ -83,52 +67,47 @@ contract ReviewSystem {
         });
 
         reviews[_transactionId] = newReview;
-
-        emit ReviewAdded(
-            _title,
-            block.timestamp,
-            _rating,
-            _text,
-            _transactionId
-        );
     }
 
     function getTransactionForSender(
         address _sender,
-        bytes32 _id
+        bytes32 _transactionId
     ) public view returns (TransactionLibrary.Transaction memory) {
         require(
             TransactionLibrary.containsTransaction(
                 transactionsBySender[_sender],
-                _id
+                _transactionId
             ),
             "Transaction not found"
         );
-        return transactionsBySender[_sender].getTransactionById(_id);
+        return transactionsBySender[_sender].getTransactionById(_transactionId);
     }
 
     function getTransactionForReciver(
         address _reciver,
-        bytes32 _id
+        bytes32 _transactionId
     ) public view returns (TransactionLibrary.Transaction memory) {
         require(
             TransactionLibrary.containsTransaction(
                 transactionsByReceiver[_reciver],
-                _id
+                _transactionId
             ),
             "Transaction not found"
         );
-        return transactionsByReceiver[_reciver].getTransactionById(_id);
+        return
+            transactionsByReceiver[_reciver].getTransactionById(_transactionId);
     }
 
-    function getUnreviewedTransactions(
-        address _sender
-    ) external view returns (TransactionLibrary.Transaction[] memory) {
+    function getUnreviewedTransactions()
+        external
+        view
+        returns (TransactionLibrary.Transaction[] memory)
+    {
         uint unreviewedCount = 0;
 
-        for (uint i = 0; i < transactionsBySender[_sender].length; i++) {
+        for (uint i = 0; i < transactionsBySender[msg.sender].length; i++) {
             if (
-                bytes(reviews[transactionsBySender[_sender][i].id].text)
+                bytes(reviews[transactionsBySender[msg.sender][i].id].text)
                     .length == 0
             ) {
                 unreviewedCount++;
@@ -141,12 +120,12 @@ contract ReviewSystem {
             );
 
         uint j = 0;
-        for (uint i = 0; i < transactionsBySender[_sender].length; i++) {
+        for (uint i = 0; i < transactionsBySender[msg.sender].length; i++) {
             if (
-                bytes(reviews[transactionsBySender[_sender][i].id].text)
+                bytes(reviews[transactionsBySender[msg.sender][i].id].text)
                     .length == 0
             ) {
-                unreviewedTransactions[j] = transactionsBySender[_sender][i];
+                unreviewedTransactions[j] = transactionsBySender[msg.sender][i];
                 j++;
             }
         }
