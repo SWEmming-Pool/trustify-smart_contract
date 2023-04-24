@@ -42,7 +42,7 @@ contract ReviewSystem {
         uint8 _rating,
         string memory _text
     )
-        public
+        external
         transactionSenderOnly(_transactionId)
         transactionExists(_transactionId)
         reviewNotAlreadyExists(_transactionId)
@@ -72,7 +72,7 @@ contract ReviewSystem {
     function getTransactionForSender(
         address _sender,
         bytes32 _transactionId
-    ) public view returns (TransactionLibrary.Transaction memory) {
+    ) external view returns (TransactionLibrary.Transaction memory) {
         require(
             TransactionLibrary.containsTransaction(
                 transactionsBySender[_sender],
@@ -86,7 +86,7 @@ contract ReviewSystem {
     function getTransactionForReciver(
         address _reciver,
         bytes32 _transactionId
-    ) public view returns (TransactionLibrary.Transaction memory) {
+    ) external view returns (TransactionLibrary.Transaction memory) {
         require(
             TransactionLibrary.containsTransaction(
                 transactionsByReceiver[_reciver],
@@ -136,7 +136,7 @@ contract ReviewSystem {
     // UC09
     function getReviewsForSender(
         address _sender
-    ) public view returns (ReviewLibrary.Review[] memory) {
+    ) external view returns (ReviewLibrary.Review[] memory) {
         uint reviewCount = 0;
 
         for (uint i = 0; i < transactionsBySender[_sender].length; i++) {
@@ -165,7 +165,7 @@ contract ReviewSystem {
 
     function getReviewsForReciver(
         address _reciver
-    ) public view returns (ReviewLibrary.Review[] memory) {
+    ) external view returns (ReviewLibrary.Review[] memory) {
         uint reviewCount = 0;
 
         for (uint i = 0; i < transactionsByReceiver[_reciver].length; i++) {
