@@ -83,19 +83,19 @@ contract ReviewSystem {
         return transactionsBySender[_sender].getTransactionById(_transactionId);
     }
 
-    function getTransactionForReciver(
-        address _reciver,
+    function getTransactionForReceiver(
+        address _receiver,
         bytes32 _transactionId
     ) external view returns (TransactionLibrary.Transaction memory) {
         require(
             TransactionLibrary.containsTransaction(
-                transactionsByReceiver[_reciver],
+                transactionsByReceiver[_receiver],
                 _transactionId
             ),
             "Transaction not found"
         );
         return
-            transactionsByReceiver[_reciver].getTransactionById(_transactionId);
+            transactionsByReceiver[_receiver].getTransactionById(_transactionId);
     }
 
     function getUnreviewedTransactions(address _addr)
@@ -163,14 +163,14 @@ contract ReviewSystem {
         return reviewsForAddress;
     }
 
-    function getReviewsForReciver(
-        address _reciver
+    function getReviewsForReceiver(
+        address _receiver
     ) external view returns (ReviewLibrary.Review[] memory) {
         uint reviewCount = 0;
 
-        for (uint i = 0; i < transactionsByReceiver[_reciver].length; i++) {
+        for (uint i = 0; i < transactionsByReceiver[_receiver].length; i++) {
             if (
-                bytes(reviews[transactionsByReceiver[_reciver][i].id].text)
+                bytes(reviews[transactionsByReceiver[_receiver][i].id].text)
                     .length > 0
             ) {
                 reviewCount++;
@@ -181,8 +181,8 @@ contract ReviewSystem {
             memory reviewsForAddress = new ReviewLibrary.Review[](reviewCount);
 
         uint j = 0;
-        for (uint i = 0; i < transactionsByReceiver[_reciver].length; i++) {
-            bytes32 id = transactionsByReceiver[_reciver][i].id;
+        for (uint i = 0; i < transactionsByReceiver[_receiver].length; i++) {
+            bytes32 id = transactionsByReceiver[_receiver][i].id;
             if (bytes(reviews[id].text).length > 0) {
                 reviewsForAddress[j] = reviews[id];
                 j++;
