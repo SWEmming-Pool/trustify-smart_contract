@@ -98,16 +98,16 @@ contract ReviewSystem {
             transactionsByReceiver[_reciver].getTransactionById(_transactionId);
     }
 
-    function getUnreviewedTransactions()
+    function getUnreviewedTransactions(address _addr)
         external
         view
         returns (TransactionLibrary.Transaction[] memory)
     {
         uint unreviewedCount = 0;
 
-        for (uint i = 0; i < transactionsBySender[msg.sender].length; i++) {
+        for (uint i = 0; i < transactionsBySender[_addr].length; i++) {
             if (
-                bytes(reviews[transactionsBySender[msg.sender][i].id].text)
+                bytes(reviews[transactionsBySender[_addr][i].id].text)
                     .length == 0
             ) {
                 unreviewedCount++;
@@ -120,12 +120,12 @@ contract ReviewSystem {
             );
 
         uint j = 0;
-        for (uint i = 0; i < transactionsBySender[msg.sender].length; i++) {
+        for (uint i = 0; i < transactionsBySender[_addr].length; i++) {
             if (
-                bytes(reviews[transactionsBySender[msg.sender][i].id].text)
+                bytes(reviews[transactionsBySender[_addr][i].id].text)
                     .length == 0
             ) {
-                unreviewedTransactions[j] = transactionsBySender[msg.sender][i];
+                unreviewedTransactions[j] = transactionsBySender[_addr][i];
                 j++;
             }
         }
