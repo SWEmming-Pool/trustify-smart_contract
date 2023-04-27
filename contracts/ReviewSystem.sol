@@ -29,20 +29,19 @@ contract ReviewSystem {
     // Storage
     // ==================
 
-    mapping(bytes32 => Transaction) private transactionsById;
-    mapping(address => Transaction[]) private transactionsBySender;
-    mapping(address => Transaction[]) private transactionsByReceiver;
-    mapping(bytes32 => Review) private reviewsById;
-    mapping(address => Review[]) private reviewsBySender;
-    mapping(address => Review[]) private reviewsByReceiver;
-
+    Transaction[] private transactions;
+    mapping(bytes32 => uint) private trIndex;
+    mapping(address => uint[]) private trIndexBySender;
+    mapping(address => uint[]) private trIndexByReceiver;
+    mapping(bytes32 => Review) private reviewById;
+    
     // ==================
     // Modifiers
     // ==================
 
     modifier transactionSenderOnly(bytes32 _transactionId) {
         require(
-            transactionsById[_transactionId].sender == msg.sender,
+            transactions[trIndex[_transactionId]].sender == msg.sender,
             "Only the sender of the transaction can add a review"
         );
         _;
@@ -50,15 +49,15 @@ contract ReviewSystem {
 
     modifier transactionExists(bytes32 _transactionId) {
         require(
-            transactionsById[_transactionId].sender != address(0),
+            transactions[trIndex[_transactionId]].sender != address(0),
             "No transaction found with the given ID"
         );
         _;
     }
 
-    modifier reviewNotAlreadyExists(bytes32 _transactionId) {
+    modifier notReviewed(bytes32 _transactionId) {
         require(
-            transactionsById[_transactionId].reviewed == false,
+            transactions[trIndex[_transactionId]].reviewed == false,
             "A review for this transaction already exists"
         );
         _;
@@ -75,17 +74,21 @@ contract ReviewSystem {
             abi.encodePacked(msg.sender, _receiver, msg.value, block.timestamp)
         );
 
-        transactionsById[id] = Transaction({
-            sender: msg.sender,
-            receiver: _receiver,
-            amount: msg.value,
-            date: block.timestamp,
-            reviewed: false,
-            id: id
-        });
+        uint index = transactions.length;
 
-        transactionsBySender[msg.sender].push(transactionsById[id]);
-        transactionsByReceiver[_receiver].push(transactionsById[id]);
+        transactions.push(
+            Transaction({
+                sender: msg.sender,
+                receiver: _receiver,
+                amount: msg.value,
+                date: block.timestamp,
+                reviewed: false,
+                id: id
+            })
+        );
+
+        trIndexBySender[msg.sender].push(index);
+        trIndexByReceiver[_receiver].push(index);
 
         payable(_receiver).transfer(msg.value);
     }
@@ -99,7 +102,7 @@ contract ReviewSystem {
         external
         transactionSenderOnly(_transactionId)
         transactionExists(_transactionId)
-        reviewNotAlreadyExists(_transactionId)
+        notReviewed(_transactionId)
     {
         require(
             bytes(_title).length <= 50,
@@ -116,7 +119,7 @@ contract ReviewSystem {
             "Text must be less than or equal to 500 characters"
         );
 
-        reviewsById[_transactionId] = Review({
+        reviewById[_transactionId] = Review({
             title: _title,
             date: block.timestamp,
             rating: _rating,
@@ -124,10 +127,7 @@ contract ReviewSystem {
             transactionId: _transactionId
         });
 
-        transactionsById[_transactionId].reviewed = true;
-        reviewsBySender[msg.sender].push(reviewsById[_transactionId]);
-        reviewsByReceiver[transactionsById[_transactionId].receiver]
-            .push(reviewsById[_transactionId]);
+        transactions[trIndex[_transactionId]].reviewed = true;
     }
 
     function getTransactionById(bytes32 _transactionId)
@@ -135,7 +135,7 @@ contract ReviewSystem {
         view
         returns (Transaction memory)
     {
-        return transactionsById[_transactionId];
+        return transactions[trIndex[_transactionId]];
     }
 
     function getUnreviewedTransactions(address _addr) 
@@ -144,8 +144,8 @@ contract ReviewSystem {
         returns (Transaction[] memory)
     {
         uint unreviewedCount = 0;
-        for (uint i = 0; i < transactionsBySender[_addr].length; i++) {
-            if (transactionsBySender[_addr][i].reviewed == false) {
+        for(uint i = 0; i < trIndexBySender[_addr].length; i++) {
+            if(transactions[trIndexBySender[_addr][i]].reviewed == false) {
                 unreviewedCount++;
             }
         }
@@ -153,31 +153,65 @@ contract ReviewSystem {
         Transaction[] memory unreviewedTransactions = 
             new Transaction[](unreviewedCount);
 
-        uint j = 0;
-        for (uint i = 0; i < transactionsBySender[_addr].length; i++) {
-            if (transactionsBySender[_addr][i].reviewed == false) {
-                unreviewedTransactions[j] = transactionsBySender[_addr][i];
-                j++;
+        for(uint i = 0; i < trIndexBySender[_addr].length; i++) {
+            if(transactions[trIndexBySender[_addr][i]].reviewed == false) {
+                unreviewedTransactions[i] = transactions[trIndexBySender[_addr][i]];
             }
         }
 
         return unreviewedTransactions;
     }
 
-    function getReviewsForSender(address _sender)
+    function getReviewsBySender(address _sender)
         external
         view
         returns (Review[] memory)
     {
-        return reviewsBySender[_sender];
+        uint reviewCount = 0;
+        for(uint i = 0; i < trIndexBySender[_sender].length; i++) {
+            if(transactions[trIndexBySender[_sender][i]].reviewed == true) {
+                reviewCount++;
+            }
+        }
+
+        Review[] memory reviewsBySender = 
+            new Review[](reviewCount);
+
+        for(uint i = 0; i < trIndexBySender[_sender].length; i++) {
+            if(transactions[trIndexBySender[_sender][i]].reviewed == true) {
+                reviewsBySender[i] = reviewById[
+                    transactions[trIndexBySender[_sender][i]].id
+                ];
+            }
+        }
+
+        return reviewsBySender;
     }
 
-    function getReviewsForReceiver(address _receiver)
+    function getReviewsByReceiver(address _receiver)
         external
         view
         returns (Review[] memory)
     {
-        return reviewsByReceiver[_receiver];
+        uint reviewCount = 0;
+        for(uint i = 0; i < trIndexByReceiver[_receiver].length; i++) {
+            if(transactions[trIndexByReceiver[_receiver][i]].reviewed == true) {
+                reviewCount++;
+            }
+        }
+
+        Review[] memory reviewsByReceiver = 
+            new Review[](reviewCount);
+
+        for(uint i = 0; i < trIndexByReceiver[_receiver].length; i++) {
+            if(transactions[trIndexByReceiver[_receiver][i]].reviewed == true) {
+                reviewsByReceiver[i] = reviewById[
+                    transactions[trIndexByReceiver[_receiver][i]].id
+                ];
+            }
+        }
+
+        return reviewsByReceiver;
     }
 
 }
