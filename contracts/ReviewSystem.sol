@@ -7,6 +7,7 @@ import "./ReviewLibrary.sol";
 contract ReviewSystem {
     using TransactionLibrary for TransactionLibrary.Transaction[];
 
+    TransactionLibrary.Transaction[] private transactions;
     mapping(address => TransactionLibrary.Transaction[])
         private transactionsBySender;
     mapping(address => TransactionLibrary.Transaction[])
@@ -18,6 +19,13 @@ contract ReviewSystem {
 
         bytes32 id = keccak256(
             abi.encodePacked(msg.sender, _receiver, msg.value, block.timestamp)
+        );
+
+        transactions.addTransaction(
+            msg.sender,
+            _receiver,
+            msg.value,
+            id
         );
 
         transactionsBySender[msg.sender].addTransaction(
@@ -34,6 +42,26 @@ contract ReviewSystem {
         );
 
         payable(_receiver).transfer(msg.value);
+    }
+
+    function getTransactionById(bytes32 _id)
+        external
+        view
+        returns (TransactionLibrary.Transaction memory)
+    {
+        bool found = false;
+        uint index = 0;
+        
+        for(index = 0; index < transactions.length; index++) {
+            if(transactions[index].id == _id) {
+                found = true;
+                break;
+            }
+        }
+
+        require(found, "Transaction not found");
+
+        return transactions[index];
     }
 
     function addReview(
