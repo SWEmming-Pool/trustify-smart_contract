@@ -29,10 +29,12 @@ contract ReviewSystem {
     // Storage
     // ==================
 
-    mapping(bytes32 => Review) private reviewsById;
     mapping(bytes32 => Transaction) private transactionsById;
     mapping(address => Transaction[]) private transactionsBySender;
     mapping(address => Transaction[]) private transactionsByReceiver;
+    mapping(bytes32 => Review) private reviewsById;
+    mapping(address => Review[]) private reviewsBySender;
+    mapping(address => Review[]) private reviewsByReceiver;
 
     // ==================
     // Modifiers
@@ -56,7 +58,7 @@ contract ReviewSystem {
 
     modifier reviewNotAlreadyExists(bytes32 _transactionId) {
         require(
-            transactionsById[_transactionId].reviewed == true,
+            transactionsById[_transactionId].reviewed == false,
             "A review for this transaction already exists"
         );
         _;
@@ -66,14 +68,14 @@ contract ReviewSystem {
     // Public Functions
     // ==================
 
-    function sendeTransaction(address _receiver) external payable {
+    function sendTransaction(address _receiver) external payable {
         require(msg.value > 0, "The sent amount must be greater than 0");
 
         bytes32 id = keccak256(
             abi.encodePacked(msg.sender, _receiver, msg.value, block.timestamp)
         );
 
-        Transaction memory newTransaction = Transaction({
+        transactionsById[id] = Transaction({
             sender: msg.sender,
             receiver: _receiver,
             amount: msg.value,
@@ -82,9 +84,8 @@ contract ReviewSystem {
             id: id
         });
 
-        transactionsById[id] = newTransaction;
-        transactionsBySender[msg.sender].push(newTransaction);
-        transactionsByReceiver[_receiver].push(newTransaction);
+        transactionsBySender[msg.sender].push(transactionsById[id]);
+        transactionsByReceiver[_receiver].push(transactionsById[id]);
 
         payable(_receiver).transfer(msg.value);
     }
@@ -115,7 +116,7 @@ contract ReviewSystem {
             "Text must be less than or equal to 500 characters"
         );
 
-        Review memory newReview = Review({
+        reviewsById[_transactionId] = Review({
             title: _title,
             date: block.timestamp,
             rating: _rating,
@@ -123,8 +124,10 @@ contract ReviewSystem {
             transactionId: _transactionId
         });
 
-        reviewsById[_transactionId] = newReview;
         transactionsById[_transactionId].reviewed = true;
+        reviewsBySender[msg.sender].push(reviewsById[_transactionId]);
+        reviewsByReceiver[transactionsById[_transactionId].receiver]
+            .push(reviewsById[_transactionId]);
     }
 
     function getTransactionById(bytes32 _transactionId)
@@ -135,7 +138,7 @@ contract ReviewSystem {
         return transactionsById[_transactionId];
     }
 
-    function getUnreviewedTransaction(address _addr) 
+    function getUnreviewedTransactions(address _addr) 
         external
         view
         returns (Transaction[] memory)
@@ -166,24 +169,7 @@ contract ReviewSystem {
         view
         returns (Review[] memory)
     {
-        uint reviewCount = 0;
-        for (uint i = 0; i < transactionsBySender[_sender].length; i++) {
-            if (transactionsBySender[_sender][i].reviewed == true) {
-                reviewCount++;
-            }
-        }
-
-        Review[] memory reviews = new Review[](reviewCount);
-
-        uint j = 0;
-        for (uint i = 0; i < transactionsBySender[_sender].length; i++) {
-            if (transactionsBySender[_sender][i].reviewed == true) {
-                reviews[j] = reviewsById[transactionsBySender[_sender][i].id];
-                j++;
-            }
-        }
-
-        return reviews;
+        return reviewsBySender[_sender];
     }
 
     function getReviewsForReceiver(address _receiver)
@@ -191,24 +177,7 @@ contract ReviewSystem {
         view
         returns (Review[] memory)
     {
-        uint reviewCount = 0;
-        for (uint i = 0; i < transactionsByReceiver[_receiver].length; i++) {
-            if (transactionsByReceiver[_receiver][i].reviewed == true) {
-                reviewCount++;
-            }
-        }
-
-        Review[] memory reviews = new Review[](reviewCount);
-
-        uint j = 0;
-        for (uint i = 0; i < transactionsByReceiver[_receiver].length; i++) {
-            if (transactionsByReceiver[_receiver][i].reviewed == true) {
-                reviews[j] = reviewsById[transactionsByReceiver[_receiver][i].id];
-                j++;
-            }
-        }
-
-        return reviews;
+        return reviewsByReceiver[_receiver];
     }
 
 }
