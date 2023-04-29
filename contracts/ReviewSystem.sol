@@ -133,6 +133,14 @@ contract ReviewSystem {
         return unreviewedTransactions;
     }
 
+    function getReviewById(bytes32 _id)
+        external
+        view
+        returns (ReviewLibrary.Review memory)
+    {
+        return reviews[_id];
+    }
+
     // UC09
     function getReviewsBySender(
         address _sender
