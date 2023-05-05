@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
+pragma experimental ABIEncoderV2;
 
 import "./TransactionLibrary.sol";
 import "./ReviewLibrary.sol";
@@ -7,6 +8,7 @@ import "./ReviewLibrary.sol";
 contract ReviewSystem {
     using TransactionLibrary for TransactionLibrary.Transaction[];
 
+    TransactionLibrary.Transaction[] private transactions;
     mapping(address => TransactionLibrary.Transaction[])
         private transactionsBySender;
     mapping(address => TransactionLibrary.Transaction[])
@@ -18,6 +20,13 @@ contract ReviewSystem {
 
         bytes32 id = keccak256(
             abi.encodePacked(msg.sender, _receiver, msg.value, block.timestamp)
+        );
+
+        transactions.addTransaction(
+            msg.sender,
+            _receiver,
+            msg.value,
+            id
         );
 
         transactionsBySender[msg.sender].addTransaction(
@@ -36,6 +45,26 @@ contract ReviewSystem {
         payable(_receiver).transfer(msg.value);
     }
 
+    function getTransactionById(bytes32 _id)
+        external
+        view
+        returns (TransactionLibrary.Transaction memory)
+    {
+        bool found = false;
+        uint index = 0;
+        
+        for(index = 0; index < transactions.length; index++) {
+            if(transactions[index].id == _id) {
+                found = true;
+                break;
+            }
+        }
+
+        require(found, "Transaction not found");
+
+        return transactions[index];
+    }
+
     function addReview(
         bytes32 _transactionId,
         string memory _title,
@@ -45,7 +74,7 @@ contract ReviewSystem {
         external
         transactionSenderOnly(_transactionId)
         transactionExists(_transactionId)
-        reviewNotAlreadyExists(_transactionId)
+        notAlreadyReviewed(_transactionId)
     {
         require(
             bytes(_title).length <= 50,
@@ -69,45 +98,16 @@ contract ReviewSystem {
         reviews[_transactionId] = newReview;
     }
 
-    function getTransactionForSender(
-        address _sender,
-        bytes32 _transactionId
-    ) external view returns (TransactionLibrary.Transaction memory) {
-        require(
-            TransactionLibrary.containsTransaction(
-                transactionsBySender[_sender],
-                _transactionId
-            ),
-            "Transaction not found"
-        );
-        return transactionsBySender[_sender].getTransactionById(_transactionId);
-    }
-
-    function getTransactionForReciver(
-        address _reciver,
-        bytes32 _transactionId
-    ) external view returns (TransactionLibrary.Transaction memory) {
-        require(
-            TransactionLibrary.containsTransaction(
-                transactionsByReceiver[_reciver],
-                _transactionId
-            ),
-            "Transaction not found"
-        );
-        return
-            transactionsByReceiver[_reciver].getTransactionById(_transactionId);
-    }
-
-    function getUnreviewedTransactions()
+    function getUnreviewedTransactions(address _addr)
         external
         view
         returns (TransactionLibrary.Transaction[] memory)
     {
         uint unreviewedCount = 0;
 
-        for (uint i = 0; i < transactionsBySender[msg.sender].length; i++) {
+        for (uint i = 0; i < transactionsBySender[_addr].length; i++) {
             if (
-                bytes(reviews[transactionsBySender[msg.sender][i].id].text)
+                bytes(reviews[transactionsBySender[_addr][i].id].text)
                     .length == 0
             ) {
                 unreviewedCount++;
@@ -120,12 +120,12 @@ contract ReviewSystem {
             );
 
         uint j = 0;
-        for (uint i = 0; i < transactionsBySender[msg.sender].length; i++) {
+        for (uint i = 0; i < transactionsBySender[_addr].length; i++) {
             if (
-                bytes(reviews[transactionsBySender[msg.sender][i].id].text)
+                bytes(reviews[transactionsBySender[_addr][i].id].text)
                     .length == 0
             ) {
-                unreviewedTransactions[j] = transactionsBySender[msg.sender][i];
+                unreviewedTransactions[j] = transactionsBySender[_addr][i];
                 j++;
             }
         }
@@ -133,8 +133,16 @@ contract ReviewSystem {
         return unreviewedTransactions;
     }
 
+    function getReviewById(bytes32 _id)
+        external
+        view
+        returns (ReviewLibrary.Review memory)
+    {
+        return reviews[_id];
+    }
+
     // UC09
-    function getReviewsForSender(
+    function getReviewsBySender(
         address _sender
     ) external view returns (ReviewLibrary.Review[] memory) {
         uint reviewCount = 0;
@@ -163,14 +171,14 @@ contract ReviewSystem {
         return reviewsForAddress;
     }
 
-    function getReviewsForReciver(
-        address _reciver
+    function getReviewsByReceiver(
+        address _receiver
     ) external view returns (ReviewLibrary.Review[] memory) {
         uint reviewCount = 0;
 
-        for (uint i = 0; i < transactionsByReceiver[_reciver].length; i++) {
+        for (uint i = 0; i < transactionsByReceiver[_receiver].length; i++) {
             if (
-                bytes(reviews[transactionsByReceiver[_reciver][i].id].text)
+                bytes(reviews[transactionsByReceiver[_receiver][i].id].text)
                     .length > 0
             ) {
                 reviewCount++;
@@ -181,8 +189,8 @@ contract ReviewSystem {
             memory reviewsForAddress = new ReviewLibrary.Review[](reviewCount);
 
         uint j = 0;
-        for (uint i = 0; i < transactionsByReceiver[_reciver].length; i++) {
-            bytes32 id = transactionsByReceiver[_reciver][i].id;
+        for (uint i = 0; i < transactionsByReceiver[_receiver].length; i++) {
+            bytes32 id = transactionsByReceiver[_receiver][i].id;
             if (bytes(reviews[id].text).length > 0) {
                 reviewsForAddress[j] = reviews[id];
                 j++;
@@ -225,7 +233,7 @@ contract ReviewSystem {
         );
         _;
     }
-    modifier reviewNotAlreadyExists(bytes32 _transactionId) {
+    modifier notAlreadyReviewed(bytes32 _transactionId) {
         require(
             bytes(reviews[_transactionId].text).length == 0,
             "A review for this transaction already exists"
